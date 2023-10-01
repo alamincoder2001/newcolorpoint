@@ -52,9 +52,12 @@ class Customer extends CI_Controller
             select
                 c.*,
                 d.District_Name,
+                e.Employee_ID,
+                e.Employee_Name,
                 concat(c.Customer_Code, ' - ', c.Customer_Name, ' - ', c.owner_name, ' - ', c.Customer_Mobile) as display_name
             from tbl_customer c
             left join tbl_district d on d.District_SlNo = c.area_ID
+            left join tbl_employee e on e.Employee_SlNo = c.employeeId
             where c.status = 'a'
             and c.Customer_Type != 'G'
             and (c.Customer_brunchid = ? or c.Customer_brunchid = 0)
@@ -79,6 +82,53 @@ class Customer extends CI_Controller
         $dueResult = $this->mt->customerDue($clauses);
 
         echo json_encode($dueResult);
+    }
+
+    public function getEmployeeWiseCustomerDue()
+    {
+        $data = json_decode($this->input->raw_input_stream);
+        $branchId = $this->session->userdata("BRANCHid");
+        $empId = "";
+        if (isset($data->employeeId) && $data->employeeId != '') {
+            $empId = " and em.Employee_SlNo = '$data->employeeId'";
+        }
+        $employees = $this->db->query("SELECT em.Employee_SlNo, em.Employee_ID, em.Employee_Name FROM tbl_employee em WHERE em.status = 'a' AND em.Employee_brinchid = ? $empId", $branchId)->result();
+
+        foreach ($employees as $key => $item) {
+            $item->dueCustomer = $this->db->query("SELECT
+                            c.Customer_SlNo,
+                            c.Customer_Code,
+                            c.Customer_Name,
+                            ifnull((SELECT SUM(sm.SaleMaster_TotalSaleAmount) FROM tbl_salesmaster sm 
+                            WHERE sm.SalseCustomer_IDNo = c.Customer_SlNo
+                            AND sm.SaleMaster_SaleDate BETWEEN '$data->dateFrom' AND '$data->dateTo'
+                            AND sm.Status = 'a'), 0) as salesTotal,
+                            ifnull((SELECT SUM(sm.SaleMaster_PaidAmount) FROM tbl_salesmaster sm 
+                            WHERE sm.SalseCustomer_IDNo = c.Customer_SlNo
+                            AND sm.SaleMaster_SaleDate BETWEEN '$data->dateFrom' AND '$data->dateTo'
+                            AND sm.Status = 'a'), 0) as salesPaid,
+                            ifnull((SELECT SUM(cp.CPayment_amount) FROM tbl_customer_payment cp 
+                            WHERE cp.CPayment_customerID = c.Customer_SlNo 
+                            AND cp.CPayment_date BETWEEN '$data->dateFrom' AND '$data->dateTo'
+                            AND cp.CPayment_status = 'a'), 0) as payment,
+                            (select ifnull(sum(cheq.check_amount), 0.00) 
+                                from tbl_checks cheq
+                                where cheq.cus_id = c.Customer_SlNo 
+                                and cheq.check_status = 'Pa'
+                                and cheq.status = 'a') as checkPayment,
+                            (SELECT salesPaid + payment+checkPayment) as paymentTotal
+                        FROM tbl_customer c
+                        WHERE c.status = 'a' AND c.Customer_brunchid = '$branchId' 
+                        AND c.employeeId = '$item->Employee_SlNo'")->result();
+
+            if (count($item->dueCustomer) > 0) {
+                foreach ($item->dueCustomer as $cust) {
+                    $cust->openingBal =  $this->mt->customerDue(" and c.Customer_SlNo = '$cust->Customer_SlNo'", $data->dateFrom)[0]->dueAmount;
+                }
+            }
+        }
+
+        echo json_encode($employees);
     }
 
     public function getCustomerPayments()

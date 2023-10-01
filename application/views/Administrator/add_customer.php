@@ -103,10 +103,16 @@
 				<div class="form-group clearfix">
 					<label class="control-label col-md-4">Area:</label>
 					<div class="col-md-7">
-						<select class="form-control" v-if="districts.length == 0"></select>
-						<v-select v-bind:options="districts" v-model="selectedDistrict" label="District_Name" v-if="districts.length > 0"></v-select>
+						<v-select v-bind:options="districts" v-model="selectedDistrict" label="District_Name" placeholder="Select Area"></v-select>
 					</div>
 					<div class="col-md-1" style="padding:0;margin-left: -15px;"><a href="/area" target="_blank" class="add-button"><i class="fa fa-plus"></i></a></div>
+				</div>
+				<div class="form-group clearfix">
+					<label class="control-label col-md-4">Employee:</label>
+					<div class="col-md-7">
+						<v-select v-bind:options="employees" v-model="selectedEmployee" label="display_name" placeholder="Select Employee"></v-select>
+					</div>
+					<div class="col-md-1" style="padding:0;margin-left: -15px;"><a href="/employee" target="_blank" class="add-button"><i class="fa fa-plus"></i></a></div>
 				</div>
 			</div>	
 
@@ -237,6 +243,8 @@
 					previous_due: 0
 				},
 				customers: [],
+				employees: [],
+				selectedEmployee: null,
 				districts: [],
 				selectedDistrict: null,
 				imageUrl: '',
@@ -265,9 +273,15 @@
 		},
 		created(){
 			this.getDistricts();
+			this.getEmployees();
 			this.getCustomers();
 		},
 		methods: {
+			getEmployees() {
+				axios.get('/get_employees').then(res => {
+					this.employees = res.data;
+				})
+			},
 			getDistricts(){
 				axios.get('/get_districts').then(res => {
 					this.districts = res.data;
@@ -294,6 +308,7 @@
 				}
 
 				this.customer.area_ID = this.selectedDistrict.District_SlNo;
+				this.customer.employeeId = this.selectedEmployee.Employee_SlNo;
 				
 				let url = '/add_customer';
 				if(this.customer.Customer_SlNo != 0){
@@ -307,7 +322,6 @@
 				axios.post(url, fd, {
 					onUploadProgress: upe => {
 						let progress = Math.round(upe.loaded / upe.total * 100);
-						console.log(progress);
 					}
 				}).then(res=>{
 					let r = res.data;
@@ -324,6 +338,11 @@
 				keys.forEach(key => {
 					this.customer[key] = customer[key];
 				})
+
+				this.selectedEmployee = {
+					Employee_SlNo: customer.employeeId,
+					display_name: `${customer.Employee_Name} - ${customer.Employee_ID}`
+				}
 
 				this.selectedDistrict = {
 					District_SlNo: customer.area_ID,
@@ -361,6 +380,8 @@
 				})
 				this.imageUrl = '';
 				this.selectedFile = null;
+				this.selectedEmployee = null;
+				this.selectedDistrict = null;
 			}
 		}
 	})

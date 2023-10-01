@@ -12,6 +12,10 @@ $db['default'] = array(
   	'password' => '',
   	'database' => 'dewbxcak_newcolorpoint',
 
+  	// 'username' => 'dewbxcak_admin4',
+  	// 'password' => '(h-BfA?6WM)Z',
+  	// 'database' => 'dewbxcak_newcolorpoint_software',
+
 	// 'username' => 'dewbxcak_admin4',
   	// 'password' => '(h-BfA?6WM)Z',
   	// 'database' => 'dewbxcak_newcolorpoint',

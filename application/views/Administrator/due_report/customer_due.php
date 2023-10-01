@@ -1,62 +1,73 @@
 <style>
-	.v-select{
-		margin-bottom: 5px;
+	.v-select {
+		margin-top: -2.5px;
+		float: right;
+		min-width: 180px;
+		margin-left: 5px;
 	}
-	.v-select .dropdown-toggle{
+
+	.v-select .dropdown-toggle {
 		padding: 0px;
+		height: 25px;
 	}
-	.v-select input[type=search], .v-select input[type=search]:focus{
+
+	.v-select input[type=search],
+	.v-select input[type=search]:focus {
 		margin: 0px;
 	}
-	.v-select .vs__selected-options{
+
+	.v-select .vs__selected-options {
 		overflow: hidden;
-		flex-wrap:nowrap;
+		flex-wrap: nowrap;
 	}
-	.v-select .selected-tag{
+
+	.v-select .selected-tag {
 		margin: 2px 0px;
 		white-space: nowrap;
-		position:absolute;
+		position: absolute;
 		left: 0px;
 	}
-	.v-select .vs__actions{
-		margin-top:-5px;
+
+	.v-select .vs__actions {
+		margin-top: -5px;
 	}
-	.v-select .dropdown-menu{
+
+	.v-select .dropdown-menu {
 		width: auto;
-		overflow-y:auto;
+		overflow-y: auto;
 	}
 </style>
 
 <div class="row" id="customerDueList">
 	<div class="col-xs-12 col-md-12 col-lg-12" style="border-bottom:1px #ccc solid;">
-		<div class="form-group">
-			<label class="col-sm-1 control-label no-padding-right">Search Type</label>
-			<div class="col-sm-2">
-				<select class="form-control" v-model="searchType" v-on:change="onChangeSearchType" style="padding:0px;">
+		<form class="form-inline">
+			<div class="form-group">
+				<select style="padding:0;" class="form-control" v-model="searchType" v-on:change="onChangeSearchType">
 					<option value="all">All</option>
+					<option value="employee">By Employee</option>
 					<option value="customer">By Customer</option>
 					<option value="area">By Area</option>
 				</select>
 			</div>
-		</div>
-		<div class="form-group" style="display: none" v-bind:style="{display: searchType == 'customer' ? '' : 'none'}">
-			<label class="col-sm-2 control-label no-padding-right">Select Customer</label>
-			<div class="col-sm-2">
-				<v-select v-bind:options="customers" v-model="selectedCustomer" label="display_name" placeholder="Select customer"></v-select>
+			<div class="form-group" style="display: none" v-bind:style="{display: searchType == 'employee' ? '' : 'none'}">
+				<v-select v-bind:options="employees" v-model="selectedEmployee" label="display_name" placeholder="Select Employee"></v-select>
 			</div>
-		</div>
-		<div class="form-group" style="display: none" v-bind:style="{display: searchType == 'area' ? '' : 'none'}">
-			<label class="col-sm-1 control-label no-padding-right">Select Area</label>
-			<div class="col-sm-2">
-				<v-select v-bind:options="areas" v-model="selectedArea" label="District_Name" placeholder="Select area"></v-select>
+			<div class="form-group" style="display: none" v-bind:style="{display: searchType == 'customer' ? '' : 'none'}">
+				<v-select v-bind:options="customers" v-model="selectedCustomer" label="display_name" placeholder="Select Customer"></v-select>
 			</div>
-		</div>
-
-		<div class="form-group">
-			<div class="col-sm-2">
-				<input type="button" class="btn btn-primary" value="Show Report" v-on:click="getDues" style="margin-top:0px;border:0px;height:28px;">
+			<div class="form-group" style="display: none" v-bind:style="{display: searchType == 'area' ? '' : 'none'}">
+				<v-select v-bind:options="areas" v-model="selectedArea" label="District_Name" placeholder="Select Area"></v-select>
 			</div>
-		</div>
+			<div class="form-group">
+				<input type="date" class="form-control" v-model="filter.dateFrom" />
+			</div>
+			<div class="form-group">
+				<input type="date" class="form-control" v-model="filter.dateTo" />
+			</div>
+			<div class="form-group">
+				<input type="button" class="btn btn-primary" value="Show Report" v-on:click="getDues" style="padding: 0px;line-height: 1;margin-top: -3px;">
+			</div>
+		</form>
 	</div>
 
 	<div class="col-md-12" style="display: none" v-bind:style="{display: dues.length > 0 ? '' : 'none'}">
@@ -64,7 +75,7 @@
 			<i class="fa fa-print"></i> Print
 		</a>
 		<div class="table-responsive" id="reportTable">
-			<table class="table table-bordered">
+			<table v-if="searchType != 'employee'" style="display:none;" :style="{display: searchType != 'employee' ? '' : 'none'}" class="table table-bordered">
 				<thead>
 					<tr>
 						<th>Customer Id</th>
@@ -88,49 +99,87 @@
 				<tfoot>
 					<tr style="font-weight:bold;">
 						<td colspan="5" style="text-align:right">Total Due</td>
-						<td style="text-align:right">{{ parseFloat(totalDue).toFixed(2) }}</td>
+						<td style="text-align:right">{{ dues.reduce((prev, cur) => {return prev + parseFloat(cur.dueAmount)}, 0).toFixed(2) }}</td>
 					</tr>
 				</tfoot>
+			</table>
+			<table v-if="searchType == 'employee'" style="display:none;" :style="{display: searchType == 'employee' ? '' : 'none'}" class="table table-bordered">
+				<tbody>
+					<template v-for="data in dues">
+						<tr style="background: gray;color:white;">
+							<th colspan="5" style="text-align: center;">{{data.Employee_Name}}</th>
+						</tr>
+						<tr>
+							<th>Customer Name</th>
+							<th>Opening Balance</th>
+							<th>Sales</th>
+							<th>Payment</th>
+							<th>Due</th>
+						</tr>
+						<tr v-for="(item, index) in data.dueCustomer">
+							<td>{{ item.Customer_Code }}-{{ item.Customer_Name }}</td>
+							<td>{{item.openingBal}}</td>
+							<td>{{parseFloat(item.salesTotal).toFixed(2)}}</td>
+							<td>{{item.paymentTotal}}</td>
+							<td>{{parseFloat((+parseFloat(item.openingBal)+ parseFloat(item.salesTotal)) - parseFloat(item.paymentTotal)).toFixed(2)}}</td>
+						</tr>
+					</template>
+				</tbody>
 			</table>
 		</div>
 	</div>
 </div>
 
-<script src="<?php echo base_url();?>assets/js/vue/vue.min.js"></script>
-<script src="<?php echo base_url();?>assets/js/vue/axios.min.js"></script>
-<script src="<?php echo base_url();?>assets/js/vue/vue-select.min.js"></script>
+<script src="<?php echo base_url(); ?>assets/js/vue/vue.min.js"></script>
+<script src="<?php echo base_url(); ?>assets/js/vue/axios.min.js"></script>
+<script src="<?php echo base_url(); ?>assets/js/vue/vue-select.min.js"></script>
+<script src="<?php echo base_url(); ?>assets/js/moment.min.js"></script>
+<script src="<?php echo base_url(); ?>assets/js/lodash.min.js"></script>
 
 <script>
 	Vue.component('v-select', VueSelect.VueSelect);
 	new Vue({
 		el: '#customerDueList',
-		data(){
+		data() {
 			return {
 				searchType: 'all',
+				filter: {
+					dateFrom: moment().format('YYYY-MM-DD'),
+					dateTo: moment().format('YYYY-MM-DD'),
+				},
 				customers: [],
 				selectedCustomer: null,
 				areas: [],
 				selectedArea: null,
+				employees: [],
+				selectedEmployee: null,
+
 				dues: [],
-				totalDue: 0.00
 			}
 		},
-		created(){
+		created() {
 
 		},
-		methods:{
-			onChangeSearchType(){
-				if(this.searchType == 'customer' && this.customers.length == 0){
+		methods: {
+			onChangeSearchType() {
+				this.customers = [];
+				this.areas = [];
+				this.employees = [];
+
+				if (this.searchType == 'customer') {
 					this.getCustomers();
-				} else if(this.searchType == 'area' && this.areas.length == 0) {
+				} else if (this.searchType == 'area') {
 					this.getAreas();
+				} else if (this.searchType == 'employee') {
+					this.getEmployees();
 				}
-				if(this.searchType == 'all'){
+				if (this.searchType == 'all') {
 					this.selectedCustomer = null;
 					this.selectedArea = null;
+					this.selectedEmployee = null;
 				}
 			},
-			getCustomers(){
+			getCustomers() {
 				axios.get('/get_customers').then(res => {
 					this.customers = res.data;
 				})
@@ -140,25 +189,37 @@
 					this.areas = res.data;
 				})
 			},
-			getDues(){
-				if(this.searchType == 'customer' && this.selectedCustomer == null){
-					alert('Select customer');
-					console.log(this.selectedCustomer);
-					return;
-				}
-
-				let customerId = this.selectedCustomer == null ? null : this.selectedCustomer.Customer_SlNo;
-				let districtId = this.selectedArea == null ? null : this.selectedArea.District_SlNo;
-				axios.post('/get_customer_due', {customerId: customerId, districtId: districtId}).then(res => {
-					if(this.searchType == 'customer'){
-						this.dues = res.data;
-					} else {
-						this.dues = res.data.filter(d => parseFloat(d.dueAmount) != 0);
-					}
-					this.totalDue = this.dues.reduce((prev, cur) => { return prev + parseFloat(cur.dueAmount) }, 0);
+			getEmployees() {
+				axios.get('/get_employees').then(res => {
+					this.employees = res.data;
 				})
 			},
-			async print(){
+			getDues() {
+				this.filter.employeeId = this.selectedEmployee == null ? null : this.selectedEmployee.Employee_SlNo;
+				this.filter.customerId = this.selectedCustomer == null ? null : this.selectedCustomer.Customer_SlNo;
+				this.filter.districtId = this.selectedArea == null ? null : this.selectedArea.District_SlNo;
+
+				let url;
+				if (this.searchType != 'employee') {
+					url = '/get_customer_due';
+				} else {
+					url = '/get_employeewisedue';
+				}
+
+				axios.post(url, this.filter).then(res => {
+					let dues = res.data;
+					if (this.searchType != 'employee') {
+						this.dues = dues.filter(d => parseFloat(d.dueAmount) != 0);
+					} else {
+						this.dues = dues.filter(due => {
+							return due.dueCustomer.length > 0
+						});
+					}
+
+
+				})
+			},
+			async print() {
 				let reportContent = `
 					<div class="container">
 						<h4 style="text-align:center">Customer due report</h4 style="text-align:center">
@@ -172,7 +233,7 @@
 
 				var mywindow = window.open('', 'PRINT', `width=${screen.width}, height=${screen.height}`);
 				mywindow.document.write(`
-					<?php $this->load->view('Administrator/reports/reportHeader.php');?>
+					<?php $this->load->view('Administrator/reports/reportHeader.php'); ?>
 				`);
 
 				mywindow.document.body.innerHTML += reportContent;

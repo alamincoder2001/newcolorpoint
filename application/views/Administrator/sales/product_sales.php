@@ -56,7 +56,7 @@
 			<div class="form-group">
 				<label class="col-sm-1 control-label no-padding-right"> Sales By </label>
 				<div class="col-sm-2">
-					<v-select v-bind:options="employees" v-model="selectedEmployee" label="Employee_Name" placeholder="Select Employee"></v-select>
+					<v-select v-bind:options="employees" @input="onChangeEmployee" v-model="selectedEmployee" label="Employee_Name" placeholder="Select Employee"></v-select>
 				</div>
 			</div>
 
@@ -533,7 +533,11 @@
 				await axios.post('/get_customers', {
 					customerType: this.sales.salesType
 				}).then(res => {
-					this.customers = res.data;
+					if (this.selectedEmployee != null) {
+						this.customers = res.data.filter(cus => cus.employeeId == this.selectedEmployee.Employee_SlNo);
+					} else {
+						this.customers = res.data;
+					}
 					this.customers.unshift({
 						Customer_SlNo: 'C01',
 						Customer_Code: '',
@@ -614,7 +618,15 @@
 
 				await this.getCustomerDue();
 
+				this.selectedEmployee = {
+					Employee_SlNo: this.selectedCustomer.employeeId,
+					Employee_Name: this.selectedCustomer.Employee_Name
+				}
+
 				this.calculateTotal();
+			},
+			onChangeEmployee() {
+				this.getCustomers();
 			},
 			async getCustomerDue() {
 				await axios.post('/get_customer_due', {
