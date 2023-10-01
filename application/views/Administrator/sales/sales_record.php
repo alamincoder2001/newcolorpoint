@@ -315,8 +315,20 @@
 									<td style="text-align:center;">{{ parseFloat(product.quantity).toFixed(2) }}</td>
 									<td style="text-align:right;">{{ parseFloat(parseFloat(product.saleRate) * parseFloat(product.quantity)).toFixed(2) }}</td>
 								</tr>
+								<tr>
+									<th colspan="2">Total</th>
+									<th style="text-align: center;">{{sale.products.reduce((ac, pr) => {return ac +parseFloat(pr.quantity)},0).toFixed(2)}}</th>
+									<th style="text-align: right;">{{sale.products.reduce((ac, pr) => {return ac +(parseFloat(pr.quantity)*parseFloat(pr.saleRate))},0).toFixed(2)}}</th>
+								</tr>
 							</template>
 						</tbody>
+						<tfoot>
+							<tr>
+								<th colspan="2">Total</th>
+								<th style="text-align: center;">{{sales.reduce((acc, pre) => {return acc + pre.products.reduce((ac, pr) => {return ac +parseFloat(pr.quantity)},0)},0).toFixed(2)}}</th>
+								<th style="text-align: right;">{{sales.reduce((acc, pre) => {return acc + pre.products.reduce((ac, pr) => {return ac +(parseFloat(pr.quantity)*parseFloat(pr.saleRate))},0)},0).toFixed(2)}}</th>
+							</tr>
+						</tfoot>
 					</table>
 				</template>
 			</div>
